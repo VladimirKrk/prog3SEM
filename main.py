@@ -1,47 +1,33 @@
-# используется для сортировки
 from operator import itemgetter
-
+import unittest
 
 class Program:
-    """Program"""
-
     def __init__(self, id, name, version, comp_id):
         self.id = id
-        self.name = name # name of the program
-        self.version = version #version of the program
-        self.comp_id = comp_id # id of the computer
-
+        self.name = name
+        self.version = version
+        self.comp_id = comp_id
 
 class Computer:
-    """Computer"""
-
     def __init__(self, id, model):
-        self.id = id #computer's id
-        self.model = model #model of the computer
+        self.id = id
+        self.model = model
 
-#
 class ProgramComputer:
-    """
-    'Computer's programs' for many-to-many realisation
-    """
-
     def __init__(self, comp_id, program_id):
-        self.comp_id = comp_id #computer id
-        self.program_id = program_id # program id
+        self.comp_id = comp_id
+        self.program_id = program_id
 
-
-# Computer info
+# Данные
 computers = [
     Computer(1, 'Macbook Pro M2'),
     Computer(2, 'Lenovo ThinkPad 1'),
     Computer(3, 'Asus E210'),
-
     Computer(11, 'Lenovo Yoga Slim 7x'),
     Computer(22, 'Macbook Pro M1'),
     Computer(33, 'Asus X510'),
 ]
 
-# Programs
 programs = [
     Program(1, 'Microsoft Ofiice', 2012, 1),
     Program(2, 'Adobe Photoshop', 2021, 2),
@@ -51,8 +37,8 @@ programs = [
 ]
 
 programs_computers = [
-    ProgramComputer(1,1),
-    ProgramComputer(1,5),
+    ProgramComputer(1, 1),
+    ProgramComputer(1, 5),
     ProgramComputer(2, 2),
     ProgramComputer(3, 3),
     ProgramComputer(3, 4),
@@ -62,54 +48,73 @@ programs_computers = [
     ProgramComputer(33, 3),
 ]
 
+def get_one_to_many(computers, programs):
+    return [(p.name, p.version, c.model)
+            for c in computers
+            for p in programs
+            if p.comp_id == c.id]
 
-def main():
-    """Main Function"""
-
-    # Соединение данных один-ко-многим
-    one_to_many = [(p.name, p.version, c.model)
-                   for c in computers
-                   for p in programs
-                   if p.comp_id == c.id]
-
-    # Соединение данных многие-ко-многим
+def get_many_to_many(computers, programs, programs_computers):
     many_to_many_temp = [(c.model, pc.comp_id, pc.program_id)
                          for c in computers
                          for pc in programs_computers
                          if c.id == pc.comp_id]
 
-    many_to_many = [(p.name, p.version, comp_model)
-                    for comp_model, comp_id,program_id in many_to_many_temp
-                    for p in programs
-                    if p.id == program_id]
+    return [(p.name, p.version, comp_model)
+            for comp_model, comp_id, program_id in many_to_many_temp
+            for p in programs
+            if p.id == program_id]
 
-    print('Задание А1')
-    res_11 = sorted(one_to_many, key=itemgetter(2))
-    print(res_11)
+def task_a1(one_to_many):
+    return sorted(one_to_many, key=itemgetter(2))
 
-    #Sorting the Computers by the most recent version
-    print('\nЗадание А2')
-    res_12_unsorted = []
+def task_a2(one_to_many, computers):
+    res = []
     for c in computers:
         c_progs = list(filter(lambda i: i[2] == c.model, one_to_many))
-        if len(c_progs) > 0:
+        if c_progs:
             versions = [ver for _, ver, _ in c_progs]
-            res_12_unsorted.append((c.model, max(versions)))
+            res.append((c.model, max(versions)))
 
-    res_12 = sorted(res_12_unsorted, key=itemgetter(1), reverse=True)
-    print(res_12)
+    return sorted(res, key=itemgetter(1), reverse=True)
 
-    #Sorting the computers by the "Pro" part inside of it
-    print('\nЗадание А3')
-    res_13 = {}
+def task_a3(many_to_many, computers):
+    res = {}
     for c in computers:
         if 'Pro' in c.model:
             c_progs = list(filter(lambda i: i[2] == c.model, many_to_many))
             prog_names = [x for x, _, _ in c_progs]
-            res_13[c.model] = prog_names
+            res[c.model] = prog_names
 
-    print(res_13)
+    return res
 
+# Модульные тесты
+class TestTasks(unittest.TestCase):
+    def setUp(self):
+        self.one_to_many = get_one_to_many(computers, programs)
+        self.many_to_many = get_many_to_many(computers, programs, programs_computers)
+
+    def test_task_a1(self):
+        expected = [('GoogleChrome', 2023, 'Asus E210'),
+ ('Visual Studio', 2022, 'Asus E210'),
+ ('Adobe Photoshop', 2021, 'Lenovo ThinkPad 1'),
+ ('Microsoft Ofiice', 2012, 'Macbook Pro M2'),
+ ('Intellij IDEA', 2024, 'Macbook Pro M2')]
+        result = task_a1(self.one_to_many)
+        self.assertEqual(result[:5], expected)
+
+    def test_task_a2(self):
+        expected = [('Macbook Pro M2', 2024), ('Asus E210', 2023), ('Lenovo ThinkPad 1', 2021)]
+        result = task_a2(self.one_to_many, computers)
+        self.assertEqual(result[:3], expected)
+
+    def test_task_a3(self):
+        expected = {
+            'Macbook Pro M2': ['Microsoft Ofiice', 'Intellij IDEA'],
+            'Macbook Pro M1': ['GoogleChrome']
+        }
+        result = task_a3(self.many_to_many, computers)
+        self.assertEqual({k: v for k, v in result.items() if 'Pro' in k}, expected)
 
 if __name__ == '__main__':
-    main()
+    unittest.main()
